@@ -3,16 +3,15 @@ from graphene_sqlalchemy import SQLAlchemyObjectType
 from models import Movie as MovieModel, db
 from models import Genre as GenreModel
 from sqlalchemy.orm import Session
+from graphene import Int
 
 class Movie(SQLAlchemyObjectType):
     class Meta:
-        movie_model = MovieModel # This is mapping to the movie model in our models.py
-        interfaces = (graphene.relay.Node,)
+        model = MovieModel
        
 class Genre(SQLAlchemyObjectType):
     class Meta:
-        genre_model = GenreModel
-        interfaces = (graphene.relay.Node,) 
+        model = GenreModel
 
 class Query(graphene.ObjectType):
     movies = graphene.List(Movie)
@@ -44,18 +43,19 @@ class AddMovie(graphene.Mutation):
 class AddGenre(graphene.Mutation):
     class Arguments:
         name = graphene.String(required=True)
-        movie_id = graphene.int(required=True)
+        movie_id = graphene.Int(required=True)
 
     genre = graphene.Field(Genre)
 
     def mutate(self, info, name, movie_id):
         with Session(db.engine) as session:
             with session.begin():
-                genre = MovieModel(name=name, movie_id=movie_id)
+                genre = GenreModel(name=name, movie_id=movie_id)
                 session.add(genre)
             
             session.refresh(genre)
             return AddGenre(genre=genre)
+
         
 class UpdateMovie(graphene.Mutation):
     class Arguments:
@@ -142,3 +142,7 @@ class Mutation(graphene.ObjectType):
     create_genre = AddGenre.Field()
     update_genre = UpdateGenre.Field()
     delete_genre = DeleteGenre.Field()
+
+class Query(graphene.ObjectType):
+    get_movie_by_genre = getMoviesByGenre.Field()
+    get_genre_by_movie = getGenreByMovie.Field()
