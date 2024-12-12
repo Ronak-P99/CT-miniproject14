@@ -3,6 +3,7 @@ from graphene_sqlalchemy import SQLAlchemyObjectType
 from models import Movie as MovieModel, db
 from models import Genre as GenreModel
 from sqlalchemy.orm import Session
+from sqlalchemy import select, func
 from graphene import Int
 
 class Movie(SQLAlchemyObjectType):
@@ -16,11 +17,23 @@ class Genre(SQLAlchemyObjectType):
 class Query(graphene.ObjectType):
     movies = graphene.List(Movie)
     genres = graphene.List(Genre)
+    getMoviesByGenres = graphene.List(Movie, genreId=graphene.Int(required=True))
 
     def resolve_movies(self, info): # Resolver
         return db.session.execute(db.select(MovieModel)).scalars()
     def resolve_genres(self, info):
         return db.session.execute(db.select(GenreModel)).scalars()
+    
+    def resolve_get_movies_by_genres(self, info, genreId):
+        query = (
+            select(MovieModel)
+            .join(GenreModel, GenreModel.movie_id == MovieModel.id)
+            .where(GenreModel.id == genreId)
+        )
+        movies = db.session.execute(query).scalars().all()
+        print(movies)
+        return movies
+
 
 
 class AddMovie(graphene.Mutation):
@@ -142,7 +155,3 @@ class Mutation(graphene.ObjectType):
     create_genre = AddGenre.Field()
     update_genre = UpdateGenre.Field()
     delete_genre = DeleteGenre.Field()
-
-class Query(graphene.ObjectType):
-    get_movie_by_genre = getMoviesByGenre.Field()
-    get_genre_by_movie = getGenreByMovie.Field()
