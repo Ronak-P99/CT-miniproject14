@@ -17,24 +17,37 @@ class Genre(SQLAlchemyObjectType):
 class Query(graphene.ObjectType):
     movies = graphene.List(Movie)
     genres = graphene.List(Genre)
-    getMoviesByGenres = graphene.List(Movie, genreId=graphene.Int(required=True))
+    mg = graphene.List(Movie, genreId=graphene.Int(required=True))
+    gm = graphene.List(Genre, movieId=graphene.Int(required=True))
 
     def resolve_movies(self, info): # Resolver
         return db.session.execute(db.select(MovieModel)).scalars()
     def resolve_genres(self, info):
         return db.session.execute(db.select(GenreModel)).scalars()
     
-    def resolve_get_movies_by_genres(self, info, genreId):
+    def resolve_mg(self, info, genreId):
         query = (
             select(MovieModel)
             .join(GenreModel, GenreModel.movie_id == MovieModel.id)
             .where(GenreModel.id == genreId)
         )
-        movies = db.session.execute(query).scalars().all()
-        print(movies)
-        return movies
+        print("Generated SQL:", query)
+        print(str(query))
+        movie = db.session.execute(query).scalars().all()
+        # print("Retrieved Movies:", movie)
+        return movie
 
-
+    def resolve_gm(self, info, movieId):
+        query = (
+            select(GenreModel)
+            .join(MovieModel, MovieModel.id == GenreModel.movie_id)
+            .where(MovieModel.id == movieId)
+        )
+        print("Generated SQL:", query)
+        print(str(query))
+        genre = db.session.execute(query).scalars().all()
+        # print("Retrieved Movies:", movie)
+        return genre
 
 class AddMovie(graphene.Mutation):
     class Arguments:
@@ -68,7 +81,6 @@ class AddGenre(graphene.Mutation):
             
             session.refresh(genre)
             return AddGenre(genre=genre)
-
         
 class UpdateMovie(graphene.Mutation):
     class Arguments:
@@ -111,7 +123,6 @@ class UpdateGenre(graphene.Mutation):
                     return None
             session.refresh(genre)
             return UpdateGenre(genre=genre)
-
         
 class DeleteMovie(graphene.Mutation):
     class Arguments:
@@ -146,7 +157,6 @@ class DeleteGenre(graphene.Mutation):
                     return None
             session.refresh(genre)
             return DeleteGenre(genre=genre)
-
 
 class Mutation(graphene.ObjectType):
     create_movie = AddMovie.Field()
